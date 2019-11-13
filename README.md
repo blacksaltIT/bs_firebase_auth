@@ -1,4 +1,4 @@
-# salty_auth
+# bs_firebase_auth
 
 Firebase authentication for Facebook, Google and Email accounts with persistent data between sessions and the option to store various data in the userbloc.
 
