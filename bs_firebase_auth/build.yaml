@@ -1,0 +1,23 @@
+# Read about `build.yaml` at https://pub.dartlang.org/packages/build_config
+targets:
+  $default:
+    builders:
+      # eflyr|graphql_builder:
+      #   generate_for:
+      #     - "**/*.graphql"
+      #   options:
+      #     gqlEndpoint: "https://eflyr-gql-backend.blacksalt-test.cloud/graphql"
+      json_serializable|json_serializable:
+        generate_for:
+          - lib/blocs/UserBloc/models.dart
+
+# builders:
+#   graphql_builder:
+#     import: "package:dart_graphql/generator/graphql_fetch_generator.dart"
+#     builder_factories: ["getGqlBuilder"]
+#     build_extensions:
+#       .graphql:
+#         - .graphql.dart
+#     auto_apply: dependents
+#     build_to: source
+#     applies_builders: ["source_gen"]
