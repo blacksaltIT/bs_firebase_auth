@@ -70,6 +70,7 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
   FirebaseUser _firebaseUser;
 
   void _copyFirebaseUserProperties(FirebaseUser firebaseUser) {
+    _blocData.user.uid = firebaseUser.uid;
     _blocData.user.email = firebaseUser.email;
     _blocData.user.displayName = firebaseUser.displayName;
     _blocData.user.profilePictureUrl = firebaseUser.photoUrl;
@@ -83,7 +84,7 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
   Future<String> get authToken async => isLoggedIn ? _authToken : null;
   Future<String> get _authToken async {
     if (_firebaseUser != null) {
-      String token = await _firebaseUser.getIdToken();
+      String token = (await _firebaseUser.getIdToken())?.token;
       if (token != null)
         return token;
       else {
@@ -138,7 +139,7 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
                         fbUser?.isAnonymous == false ? fbUser : null)));
 
             if (_firebaseUser != null && _blocData.tryLoginAtLoad) {
-              String token = await _firebaseUser.getIdToken();
+              String token = (await _firebaseUser.getIdToken())?.token;
 
               if (token != null)
                 _blocData.user.userProfile =
@@ -186,18 +187,21 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
                         if (platforms != null &&
                             !platforms.contains("facebook.com")) {
                           firebaseUser = await firebaseAuth.currentUser();
-                          firebaseUser =
-                              await firebaseUser.linkWithCredential(credential);
+                          firebaseUser = (await firebaseUser
+                                  .linkWithCredential(credential))
+                              ?.user;
                         }
                       }
 
                       firebaseUser =
-                          await firebaseAuth.signInWithCredential(credential);
+                          (await firebaseAuth.signInWithCredential(credential))
+                              ?.user;
 
                       if (event is LoginWithFacebookAndLinkAccountEvent) {
                         firebaseUser = await firebaseAuth.currentUser();
-                        firebaseUser = await firebaseUser.linkWithCredential(
-                            event.accountLinkingData.credential);
+                        firebaseUser = (await firebaseUser.linkWithCredential(
+                                event.accountLinkingData.credential))
+                            ?.user;
                       }
                     } on PlatformException catch (e) {
                       if (e.code ==
@@ -278,12 +282,12 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
                     email: event.email, password: event.password);
 
                 FirebaseUser firebaseUser =
-                    await firebaseAuth.signInWithCredential(credential);
+                    (await firebaseAuth.signInWithCredential(credential))?.user;
 
                 if (event is LoginWithEmailAndLinkAccountEvent) {
                   firebaseUser = await firebaseAuth.currentUser();
                   firebaseUser =
-                      await firebaseUser.linkWithCredential(credential);
+                      (await firebaseUser.linkWithCredential(credential))?.user;
                 }
                 if (!firebaseUser.isEmailVerified) {
                   await firebaseAuth.signOut();
@@ -303,6 +307,38 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
                 yield LoggedInWithEmailUserState<TUserProfile>(
                     user: _blocData.user,
                     password: event.password,
+                    justLoggedIn: true);
+              } on PlatformException catch (e) {
+                yield LoginErrorState(error: e, loginEvent: event);
+                yield GuestUserState();
+              }
+            }
+          }
+        } else if (event is LoginWithAnonymousEvent) {
+          //////////////////////////////////////////  LoginWithEmailEvent //////////////////////////////////////////
+
+          /* Stream<State> _mapLoginWithEmailToState(LoginWithEmailEvent event) async* */
+          {
+            if (currentState is GuestUserState) {
+              try {
+                yield UserLoggingInState(loginEvent: event);
+
+                FirebaseAuth firebaseAuth = FirebaseAuth.instance;
+
+                FirebaseUser firebaseUser =
+                    (await firebaseAuth.signInAnonymously())?.user;
+
+                logger.finer("FirebaseUser: { $firebaseUser }");
+                _firebaseUser = firebaseUser;
+                _blocData.user ??= User<TUserProfile>();
+                _blocData.user.userProfile = await manager?.create(
+                    await _authToken, _blocData.user.userProfile);
+                _blocData
+                  ..provider = Provider.anonymous;
+                _copyFirebaseUserProperties(firebaseUser);
+
+                yield LoggedInWithAnonymousUserState<TUserProfile>(
+                    user: _blocData.user,
                     justLoggedIn: true);
               } on PlatformException catch (e) {
                 yield LoginErrorState(error: e, loginEvent: event);
@@ -345,12 +381,14 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
                   FirebaseAuth firebaseAuth = FirebaseAuth.instance;
 
                   FirebaseUser firebaseUser =
-                      await firebaseAuth.signInWithCredential(credential);
+                      (await firebaseAuth.signInWithCredential(credential))
+                          ?.user;
 
                   if (event is LoginWithGoogleAndLinkAccountEvent) {
                     firebaseUser = await firebaseAuth.currentUser();
-                    firebaseUser = await firebaseUser.linkWithCredential(
-                        event.accountLinkingData.credential);
+                    firebaseUser = (await firebaseUser.linkWithCredential(
+                            event.accountLinkingData.credential))
+                        ?.user;
                   }
 
                   logger.finer("FirebaseUser: { $firebaseUser }");
@@ -469,8 +507,9 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
                       provider: Provider.facebook));
               return;
             } else
-              user = await _firebaseAuth.createUserWithEmailAndPassword(
-                  email: event.email, password: event.password);
+              user = (await _firebaseAuth.createUserWithEmailAndPassword(
+                      email: event.email, password: event.password))
+                  ?.user;
 
             if (!user.isEmailVerified) await user.sendEmailVerification();
 
@@ -524,6 +563,11 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
             password: _blocData.password,
             justLoggedIn: justLoggedIn,
             updateUserProfileEvent: event);
+      case Provider.anonymous:
+        return LoggedInWithAnonymousUserState(
+            user: _blocData.user,
+            justLoggedIn: justLoggedIn,
+            updateUserProfileEvent: event);      
 
       // Don't write default, let analyzer warn about unhandled values
     }
@@ -542,6 +586,7 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
         await GoogleSignIn().signOut();
         break;
       case Provider.email:
+      case Provider.anonymous:
         break;
     }
 

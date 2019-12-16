@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 part 'models.g.dart';
 
-enum Provider { facebook, google, email }
+enum Provider { facebook, google, email, anonymous }
 
 abstract class UserProfileManagerModel<TUserProfile> {
   Future<TUserProfile> create(String authToken, TUserProfile userProfile);
@@ -114,6 +114,7 @@ class BlocData<TUserProfile> with EquatableMixinBase, EquatableMixin {
 @JsonSerializable()
 class User<TUserProfile> with EquatableMixinBase, EquatableMixin {
   String email;
+  String uid;
   String userName;
   String displayName;
   String profilePictureUrl;
@@ -128,6 +129,7 @@ class User<TUserProfile> with EquatableMixinBase, EquatableMixin {
   List get props {
     return <dynamic>[
       userName,
+      uid,
       email,
       displayName,
       profilePictureUrl,

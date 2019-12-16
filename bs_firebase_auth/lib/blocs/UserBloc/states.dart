@@ -121,6 +121,18 @@ class LoggedInUserState<TUserProfile> extends UserBlocState {
       "${super.toString()} { user: $user, justLoggedIn: $justLoggedIn }";
 }
 
+class LoggedInWithAnonymousUserState<TUserProfile>
+    extends LoggedInUserState<TUserProfile> {
+  LoggedInWithAnonymousUserState(
+      {User<TUserProfile> user,
+      bool justLoggedIn = false,
+      UpdateUserProfileEvent<TUserProfile> updateUserProfileEvent})
+      : super(<dynamic>[],
+            user: user,
+            justLoggedIn: justLoggedIn,
+            updateUserProfileEvent: updateUserProfileEvent);
+}
+
 class LoggedInWithFacebookUserState<TUserProfile>
     extends LoggedInUserState<TUserProfile> {
   final String accessToken;

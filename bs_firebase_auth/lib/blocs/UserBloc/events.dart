@@ -41,6 +41,8 @@ class FirebaseDisconnectedLogoutEvent extends LogoutEvent {}
 
 abstract class LoginEvent extends UserBlocEvent {}
 
+class LoginWithAnonymousEvent extends LoginEvent {}
+
 class LoginWithFacebookEvent extends LoginEvent {
   final List<String> readOnlyScopes;
 
