@@ -335,7 +335,7 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
                 _blocData.user ??= User<TUserProfile>();
                 _blocData.user.userProfile = await manager?.create(
                     await _authToken, _blocData.user.userProfile);
-                _blocData..provider = Provider.anonymous;
+                _blocData.provider = Provider.anonymous;
                 _copyFirebaseUserProperties(firebaseUser);
 
                 yield LoggedInWithAnonymousUserState<TUserProfile>(
