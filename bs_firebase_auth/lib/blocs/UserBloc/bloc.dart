@@ -37,9 +37,12 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
 
   StreamSubscription _sub;
   Future<void> waitForInitialize() async {
+    if (isInitialized || initCompleter.isCompleted) return Future.value();
+    
     _sub = listen((state) {
       if (isInitialized) {
-        initCompleter.complete();
+        if (!initCompleter.isCompleted)
+          initCompleter.complete();
         _sub.cancel();
       }
     });
