@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:bs_firebase_auth/blocs/UserBloc/events.dart';
 import 'package:bs_firebase_auth/blocs/UserBloc/states.dart';
@@ -21,22 +22,28 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
   ///////// Construct, singleton, initialize /////////
   bool _initializing = false;
   UserBlocEvent get initializeEvent => InitializeEvent();
-  bool get isInitialized => currentState is! UninitializedState;
+  bool get isInitialized => state is! UninitializedState;
+  final Completer<void> initCompleter = Completer<void>();
 
   Future<void> initialize() async {
     if (isInitialized) return Future.value();
 
     if (!_initializing) {
       _initializing = true;
-      dispatch(initializeEvent);
+      add(initializeEvent);
     }
     return waitForInitialize();
   }
 
+  StreamSubscription _sub;
   Future<void> waitForInitialize() async {
-    await for (UserBlocState _ in state) {
-      if (isInitialized) return;
-    }
+    _sub = listen((state) {
+      if (isInitialized) {
+        initCompleter.complete();
+        _sub.cancel();
+      }
+    });
+    return initCompleter.future;
   }
 
   factory UserBloc(UserProfileManagerModel<TUserProfile> manager) {
@@ -89,7 +96,7 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
         return token;
       else {
         logger.finest("_authToken: FirebaseUser token is null");
-        dispatch(FirebaseDisconnectedLogoutEvent());
+        add(FirebaseDisconnectedLogoutEvent());
         return null;
       }
     } else {
@@ -106,14 +113,14 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
   }
 
   ///////// Convenient shortcuts /////////
-  bool get isLoggedIn => currentState is LoggedInUserState<TUserProfile>;
+  bool get isLoggedIn => state is LoggedInUserState<TUserProfile>;
   LoggedInUserState<TUserProfile> get loggedInUserState =>
-      currentState is LoggedInUserState<TUserProfile>
-          ? currentState as LoggedInUserState<TUserProfile>
+      state is LoggedInUserState<TUserProfile>
+          ? state as LoggedInUserState<TUserProfile>
           : null;
 
-  void logout() => dispatch(LogoutEvent());
-  void deleteUser() => dispatch(DeleteUserEvent());
+  void logout() => add(LogoutEvent());
+  void deleteUser() => add(DeleteUserEvent());
 
   ///////// BLoC /////////
   @override
@@ -128,13 +135,17 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
         //////////////////////////////////////////  InitializeEvent //////////////////////////////////////////
 
         /*Stream<State> _mapInitializeToState(InitializeEvent event) async* */ {
-          if (currentState is UninitializedState) {
-            _blocData =
-                await BlocData.getOrCreate(_blocDataSharedPreferencesKey);
+          if (state is UninitializedState) {
+            try {
+              _blocData =
+                  await BlocData.getOrCreate(_blocDataSharedPreferencesKey);
+            } catch (e) {
+              print(e);
+            }
 
             _firebaseUser = await FirebaseAuth.instance.currentUser();
-            FirebaseAuth.instance.onAuthStateChanged.listen((fbUser) =>
-                dispatch(_OnFirebaseAuthChangedEvent(
+            FirebaseAuth.instance.onAuthStateChanged.listen((fbUser) => add(
+                _OnFirebaseAuthChangedEvent(
                     firebaseUser:
                         fbUser?.isAnonymous == false ? fbUser : null)));
 
@@ -147,7 +158,7 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
               yield _recreateLoggedInState(justLoggedIn: true);
             }
 
-            if (currentState is UninitializedState) yield GuestUserState();
+            if (state is UninitializedState) yield GuestUserState();
           }
         }
       }
@@ -158,10 +169,10 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
 
           /* Stream<State> _mapLoginWithFacebookToState(LoginWithFacebookEvent event) async* */
           {
-            if (currentState is GuestUserState || event is LinkFacebookEvent) {
+            if (state is GuestUserState || event is LinkFacebookEvent) {
               try {
                 String currentEmail = loggedInUserState?.user?.email;
-                UserBlocState previousState = currentState;
+                UserBlocState previousState = state;
 
                 yield UserLoggingInState(loginEvent: event);
 
@@ -272,7 +283,7 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
 
           /* Stream<State> _mapLoginWithEmailToState(LoginWithEmailEvent event) async* */
           {
-            if (currentState is GuestUserState) {
+            if (state is GuestUserState) {
               try {
                 yield UserLoggingInState(loginEvent: event);
 
@@ -319,7 +330,7 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
 
           /* Stream<State> _mapLoginWithEmailToState(LoginWithEmailEvent event) async* */
           {
-            if (currentState is GuestUserState) {
+            if (state is GuestUserState) {
               try {
                 yield UserLoggingInState(loginEvent: event);
 
@@ -349,7 +360,7 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
 
           /* Stream<State> _mapLoginWithGoogleToState(LoginWithGoogleEvent event) async* */
           {
-            if (currentState is GuestUserState) {
+            if (state is GuestUserState) {
               yield UserLoggingInState(loginEvent: event);
 
               try {
@@ -432,11 +443,10 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
           //////////////////////////////////////////  LogoutEvent //////////////////////////////////////////
           ///
           /* Stream<State> _mapLogoutEventToState(LogoutEvent event) async* */ {
-            if (currentState is LoggedInUserState<TUserProfile>) {
+            if (state is LoggedInUserState<TUserProfile>) {
               await _logoutUser();
               yield JustLoggedOutGuestUserState(
-                  loggedInState:
-                      currentState as LoggedInUserState<TUserProfile>);
+                  loggedInState: state as LoggedInUserState<TUserProfile>);
             } else
               yield GuestUserState();
           }
@@ -445,7 +455,7 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
 
           /* Stream<State> _mapUpdateUserProfileEventToState(UpdateUserProfileEvent event) async* */
           {
-            if (currentState is LoggedInUserState<TUserProfile>) {
+            if (state is LoggedInUserState<TUserProfile>) {
               _blocData = _blocData.clone();
 
               UserUpdateInfo fbUpdate = UserUpdateInfo();
@@ -467,13 +477,13 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
 
           /* Stream<State> _mapDeleteUserEventToState(DeleteUserEvent event) async* */
           {
-            UserBlocState state = currentState;
-            if (state is LoggedInUserState<TUserProfile>) {
+            UserBlocState bstate = state;
+            if (bstate is LoggedInUserState<TUserProfile>) {
               yield InProgressState();
 
               await _logoutUser(delete: true);
 
-              yield JustLoggedOutGuestUserState(loggedInState: state);
+              yield JustLoggedOutGuestUserState(loggedInState: bstate);
             }
           }
         } else if (event is CreateUserEvent) {

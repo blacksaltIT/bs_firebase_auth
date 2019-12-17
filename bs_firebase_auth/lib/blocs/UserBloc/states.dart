@@ -6,7 +6,10 @@ import 'package:meta/meta.dart';
 
 @immutable
 abstract class UserBlocState extends Equatable {
-  UserBlocState([List props = const <dynamic>[]]) : super(props);
+  UserBlocState([List props = const <dynamic>[]]) : super();
+
+  @override
+  List<Object> get props => props;
 
   @override
   String toString() => runtimeType.toString();

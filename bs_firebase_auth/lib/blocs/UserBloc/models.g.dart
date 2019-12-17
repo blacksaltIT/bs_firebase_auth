@@ -23,61 +23,72 @@ BlocData<TUserProfile> _$BlocDataFromJson<TUserProfile>(
 Map<String, dynamic> _$BlocDataToJson<TUserProfile>(
         BlocData<TUserProfile> instance) =>
     <String, dynamic>{
-      'user': instance.user == null ? null : toJsonUser(instance.user),
+      'user': toJsonUser(instance.user),
       'tryLoginAtLoad': instance.tryLoginAtLoad,
       'provider': _$ProviderEnumMap[instance.provider],
       'facebookAccessToken': instance.facebookAccessToken,
       'googleIdToken': instance.googleIdToken,
       'googleAccessToken': instance.googleAccessToken,
-      'password': instance.password
+      'password': instance.password,
     };
 
-T _$enumDecode<T>(Map<T, dynamic> enumValues, dynamic source) {
+T _$enumDecode<T>(
+  Map<T, dynamic> enumValues,
+  dynamic source, {
+  T unknownValue,
+}) {
   if (source == null) {
     throw ArgumentError('A value must be provided. Supported values: '
         '${enumValues.values.join(', ')}');
   }
-  return enumValues.entries
-      .singleWhere((e) => e.value == source,
-          orElse: () => throw ArgumentError(
-              '`$source` is not one of the supported values: '
-              '${enumValues.values.join(', ')}'))
-      .key;
+
+  final value = enumValues.entries
+      .singleWhere((e) => e.value == source, orElse: () => null)
+      ?.key;
+
+  if (value == null && unknownValue == null) {
+    throw ArgumentError('`$source` is not one of the supported values: '
+        '${enumValues.values.join(', ')}');
+  }
+  return value ?? unknownValue;
 }
 
-T _$enumDecodeNullable<T>(Map<T, dynamic> enumValues, dynamic source) {
+T _$enumDecodeNullable<T>(
+  Map<T, dynamic> enumValues,
+  dynamic source, {
+  T unknownValue,
+}) {
   if (source == null) {
     return null;
   }
-  return _$enumDecode<T>(enumValues, source);
+  return _$enumDecode<T>(enumValues, source, unknownValue: unknownValue);
 }
 
-const _$ProviderEnumMap = <Provider, dynamic>{
+const _$ProviderEnumMap = {
   Provider.facebook: 'facebook',
   Provider.google: 'google',
-  Provider.email: 'email'
+  Provider.email: 'email',
+  Provider.anonymous: 'anonymous',
 };
 
 User<TUserProfile> _$UserFromJson<TUserProfile>(Map<String, dynamic> json) {
   return User<TUserProfile>()
     ..email = json['email'] as String
+    ..uid = json['uid'] as String
     ..userName = json['userName'] as String
     ..displayName = json['displayName'] as String
     ..profilePictureUrl = json['profilePictureUrl'] as String
     ..currency = json['currency'] as String
-    ..userProfile = json['userProfile'] == null
-        ? null
-        : _fromJsonProfile(json['userProfile']);
+    ..userProfile = _fromJsonProfile(json['userProfile']);
 }
 
 Map<String, dynamic> _$UserToJson<TUserProfile>(User<TUserProfile> instance) =>
     <String, dynamic>{
       'email': instance.email,
+      'uid': instance.uid,
       'userName': instance.userName,
       'displayName': instance.displayName,
       'profilePictureUrl': instance.profilePictureUrl,
       'currency': instance.currency,
-      'userProfile': instance.userProfile == null
-          ? null
-          : _toJsonProfile(instance.userProfile)
+      'userProfile': _toJsonProfile(instance.userProfile),
     };

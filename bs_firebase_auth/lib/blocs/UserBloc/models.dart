@@ -28,7 +28,7 @@ dynamic _toJsonProfile(dynamic u) => toJsonProfile?.call(u);
 dynamic _fromJsonProfile(dynamic u) => fromJsonProfile?.call(u);
 
 @JsonSerializable()
-class BlocData<TUserProfile> with EquatableMixinBase, EquatableMixin {
+class BlocData<TUserProfile> with EquatableMixin {
   static Logger _logger = Logger("salty_auth.blocs.UserBloc.BlocData");
 
   @JsonKey(toJson: toJsonUser)
@@ -40,7 +40,9 @@ class BlocData<TUserProfile> with EquatableMixinBase, EquatableMixin {
   String googleAccessToken;
   String password;
 
-  BlocData();
+  BlocData() {
+    user = User();
+  }
 
   @override
   List get props {
@@ -112,7 +114,7 @@ class BlocData<TUserProfile> with EquatableMixinBase, EquatableMixin {
 }
 
 @JsonSerializable()
-class User<TUserProfile> with EquatableMixinBase, EquatableMixin {
+class User<TUserProfile> with EquatableMixin {
   String email;
   String uid;
   String userName;
