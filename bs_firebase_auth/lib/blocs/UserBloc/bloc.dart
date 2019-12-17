@@ -5,9 +5,7 @@ import 'package:bs_firebase_auth/blocs/UserBloc/models.dart';
 import 'package:bloc/bloc.dart';
 import 'package:logging/logging.dart';
 import 'package:flutter/services.dart' show PlatformException;
-import 'package:firebase_auth/firebase_auth.dart'
-    if (dart.library.io) 'package:firebase_auth/firebase_auth.dart'
-    if (dart.library.html) 'package:firebase_auth/firebase_auth_web.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_facebook_login/flutter_facebook_login.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
