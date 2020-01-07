@@ -33,6 +33,13 @@ class CreateUserEvent extends UserBlocEvent {
   CreateUserEvent({this.email, this.password});
 }
 
+class LinkWithEmailCredentialEvent extends UserBlocEvent {
+  final String email;
+  final String password;
+
+  LinkWithEmailCredentialEvent({this.email, this.password});
+}
+
 class DeleteUserEvent extends UserBlocEvent {}
 
 class FirebaseDisconnectedLogoutEvent extends LogoutEvent {}

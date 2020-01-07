@@ -38,11 +38,10 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
   StreamSubscription _sub;
   Future<void> waitForInitialize() async {
     if (isInitialized || initCompleter.isCompleted) return Future.value();
-    
+
     _sub = listen((state) {
       if (isInitialized) {
-        if (!initCompleter.isCompleted)
-          initCompleter.complete();
+        if (!initCompleter.isCompleted) initCompleter.complete();
         _sub.cancel();
       }
     });
@@ -286,7 +285,8 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
 
           /* Stream<State> _mapLoginWithEmailToState(LoginWithEmailEvent event) async* */
           {
-            if (state is GuestUserState) {
+            if (state is GuestUserState ||
+                state is LoggedInWithAnonymousUserState) {
               try {
                 yield UserLoggingInState(loginEvent: event);
 
@@ -306,6 +306,11 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
                 if (!firebaseUser.isEmailVerified) {
                   await firebaseAuth.signOut();
                   throw PlatformException(code: 'EMAIL_IS_NOT_VERIFIED');
+                }
+
+                // if state was anonymous let's delete previous user as it would be lost
+                if (state is LoggedInWithAnonymousUserState) {
+                  await _firebaseUser.delete();
                 }
 
                 logger.finer("FirebaseUser: { $firebaseUser }");
@@ -528,6 +533,33 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
           } on PlatformException catch (exception) {
             yield CreateErrorState(error: exception, createEvent: event);
             yield GuestUserState();
+          }
+        } else if (event is LinkWithEmailCredentialEvent) {
+          if (state is LoggedInWithAnonymousUserState) {
+            //already logged in just have to link the user with the credential created here
+            try {
+              FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+              FirebaseUser firebaseUser = await _firebaseAuth.currentUser();
+              List<String> platforms = await _firebaseAuth
+                  .fetchSignInMethodsForEmail(email: event.email);
+
+              if (platforms != null) {
+                throw PlatformException(code: "ERROR_EMAIL_ALREADY_IN_USE");
+              }
+
+              AuthCredential credential = EmailAuthProvider.getCredential(
+                  email: event.email, password: event.password);
+
+              await firebaseUser.linkWithCredential(credential);
+              await firebaseUser.sendEmailVerification();
+              // logout as user has to use the new credentials
+              await _logoutUser();
+              yield JustRegisteredGuestUserState();
+            } on PlatformException catch (exception) {
+              // send error and restore the previous state
+              yield ErrorState(error: exception);
+              yield state;
+            }
           }
         } else if (event is PasswordResetEvent) {
           try {

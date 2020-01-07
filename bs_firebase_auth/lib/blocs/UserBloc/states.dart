@@ -127,8 +127,10 @@ class LoggedInUserState<TUserProfile> extends UserBlocState {
 
 class LoggedInWithAnonymousUserState<TUserProfile>
     extends LoggedInUserState<TUserProfile> {
+  final bool justLinked;
   LoggedInWithAnonymousUserState(
-      {User<TUserProfile> user,
+      {this.justLinked,
+      User<TUserProfile> user,
       bool justLoggedIn = false,
       UpdateUserProfileEvent<TUserProfile> updateUserProfileEvent})
       : super(<dynamic>[],
