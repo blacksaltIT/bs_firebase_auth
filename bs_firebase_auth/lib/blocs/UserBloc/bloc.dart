@@ -11,6 +11,7 @@ import 'package:flutter_facebook_login/flutter_facebook_login.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
+import 'package:flutter/foundation.dart';
 
 class _OnFirebaseAuthChangedEvent extends UserBlocEvent {
   final FirebaseUser firebaseUser;
@@ -500,7 +501,8 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
             FirebaseUser user;
             FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
 
-            List<String> platforms = await _firebaseAuth
+            // TODO: this feature is not implemented in web yet
+            List<String> platforms = kIsWeb ? null : await _firebaseAuth
                 .fetchSignInMethodsForEmail(email: event.email);
 
             if (platforms != null && platforms.contains("password")) {
