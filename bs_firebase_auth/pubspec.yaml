@@ -15,8 +15,8 @@ dependencies:
   shared_preferences: ^0.5.6
   shared_preferences_web: ^0.1.2+2
   logging: ^0.11.3+2
-  bloc: ^2.0.0
-  flutter_bloc: ^2.1.1
+  bloc: ^3.0.0
+  flutter_bloc: ^3.2.0
   equatable: ^1.0.1
   flutter_facebook_login: ^3.0.0
   google_sign_in: ^4.0.0
