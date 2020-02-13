@@ -149,20 +149,7 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
             FirebaseAuth.instance.onAuthStateChanged.listen((fbUser) => add(
                 _OnFirebaseAuthChangedEvent(
                     firebaseUser:
-                        fbUser?.isAnonymous == false ? fbUser : null)));
-
-            // TEMPORARY FIX FirebaseAuth for web doesn't restore user after reloading the page
-            if (kIsWeb && _firebaseUser == null && _blocData.tryLoginAtLoad) {
-               if (_blocData.provider == Provider.email) {
-                 FirebaseAuth firebaseAuth = FirebaseAuth.instance;
-
-                AuthCredential credential = EmailAuthProvider.getCredential(
-                    email: _blocData.user.email, password: _blocData.password);
-
-                _firebaseUser =
-                    (await firebaseAuth.signInWithCredential(credential))?.user;
-               }
-            }                        
+                        fbUser?.isAnonymous == false ? fbUser : null)));                     
 
             if (_firebaseUser != null && _blocData.tryLoginAtLoad) {
               String token = (await _firebaseUser.getIdToken())?.token;
@@ -458,6 +445,14 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
             if (isLoggedIn) {
               _firebaseUser = event.firebaseUser;
               logger.info("OnFirebaseAuthChanged: ${event.firebaseUser}");
+            } else if (event.firebaseUser != null) {
+              _firebaseUser = event.firebaseUser;
+              String token = (await _firebaseUser.getIdToken())?.token;
+
+              if (token != null)
+                _blocData.user.userProfile =
+                    await manager?.create(token, _blocData.user.userProfile);
+              yield _recreateLoggedInState(justLoggedIn: true);
             }
           }
         } else if (event is LogoutEvent) {
