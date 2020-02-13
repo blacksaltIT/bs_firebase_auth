@@ -10,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  firebase_auth: ^0.15.0+1
+  firebase_auth: ^0.15.4
   firebase_core: ^0.4.3+1
   shared_preferences: ^0.5.6
   shared_preferences_web: ^0.1.2+2
