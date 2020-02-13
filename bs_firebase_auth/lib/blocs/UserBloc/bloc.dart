@@ -145,12 +145,24 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
             } catch (e) {
               print(e);
             }
-
             _firebaseUser = await FirebaseAuth.instance.currentUser();
             FirebaseAuth.instance.onAuthStateChanged.listen((fbUser) => add(
                 _OnFirebaseAuthChangedEvent(
                     firebaseUser:
                         fbUser?.isAnonymous == false ? fbUser : null)));
+
+            // TEMPORARY FIX FirebaseAuth for web doesn't restore user after reloading the page
+            if (kIsWeb && _firebaseUser == null && _blocData.tryLoginAtLoad) {
+               if (_blocData.provider == Provider.email) {
+                 FirebaseAuth firebaseAuth = FirebaseAuth.instance;
+
+                AuthCredential credential = EmailAuthProvider.getCredential(
+                    email: _blocData.user.email, password: _blocData.password);
+
+                _firebaseUser =
+                    (await firebaseAuth.signInWithCredential(credential))?.user;
+               }
+            }                        
 
             if (_firebaseUser != null && _blocData.tryLoginAtLoad) {
               String token = (await _firebaseUser.getIdToken())?.token;
