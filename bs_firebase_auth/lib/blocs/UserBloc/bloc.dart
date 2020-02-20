@@ -42,7 +42,9 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
 
     _sub = listen((state) {
       if (isInitialized) {
-        if (!initCompleter.isCompleted) initCompleter.complete();
+        if (!initCompleter.isCompleted) {
+          initCompleter.complete();
+        }
         _sub.cancel();
       }
     });
@@ -149,7 +151,7 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
             FirebaseAuth.instance.onAuthStateChanged.listen((fbUser) => add(
                 _OnFirebaseAuthChangedEvent(
                     firebaseUser:
-                        fbUser?.isAnonymous == false ? fbUser : null)));                     
+                        fbUser)));                     
 
             if (_firebaseUser != null && _blocData.tryLoginAtLoad) {
               String token = (await _firebaseUser.getIdToken())?.token;
