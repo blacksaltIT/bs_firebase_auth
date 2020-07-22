@@ -7,13 +7,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 part 'models.g.dart';
 
-enum Provider { facebook, google, email, anonymous }
+enum Provider { facebook, google, email, anonymous, phone }
 
 abstract class UserProfileManagerModel<TUserProfile> {
-  Future<TUserProfile> create(String authToken, TUserProfile userProfile);
+  Future<TUserProfile> create(String authToken, User<TUserProfile> user);
   TUserProfile fromJson(Map<String, dynamic> json);
   Map<String, dynamic> toJson(TUserProfile userP);
-  Future<TUserProfile> merge(TUserProfile partial, TUserProfile full);
+  Future<TUserProfile> merge(TUserProfile partial, TUserProfile full, User<TUserProfile> user);
 }
 
 typedef ToJsonCallback<T> = Map<String, dynamic> Function(T);
@@ -121,6 +121,8 @@ class User<TUserProfile> with EquatableMixin {
   String displayName;
   String profilePictureUrl;
   String currency;
+  String phoneNumber;
+  List<String> providers;
 
   @JsonKey(toJson: _toJsonProfile, fromJson: _fromJsonProfile)
   TUserProfile userProfile;
@@ -137,6 +139,8 @@ class User<TUserProfile> with EquatableMixin {
       profilePictureUrl,
       currency,
       userProfile,
+      providers,
+      phoneNumber
     ];
   }
 
@@ -145,5 +149,5 @@ class User<TUserProfile> with EquatableMixin {
   Map<String, dynamic> toJson() => _$UserToJson(this);
 
   @override
-  String toString() => "User { userName: $userName, email: $email }";
+  String toString() => "User { userName: $userName, email: $email, phoneNumber: $phoneNumber }";
 }

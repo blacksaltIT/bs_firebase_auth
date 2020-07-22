@@ -88,6 +88,8 @@ class JustRegisteredGuestUserState extends GuestUserState {}
 
 class JustResetEmailSentGuestUserState extends GuestUserState {}
 
+class JustResentVerificationEmailGuestUserState extends GuestUserState {}
+
 class LinkingNecessaryState extends GuestUserState {
   final AccountLinkingData accountLinkingData;
 
@@ -137,6 +139,47 @@ class LoggedInWithAnonymousUserState<TUserProfile>
             user: user,
             justLoggedIn: justLoggedIn,
             updateUserProfileEvent: updateUserProfileEvent);
+}
+
+class LoggedInWithPhoneNumberUserState<TUserProfile>
+    extends LoggedInUserState<TUserProfile> {
+  final bool justLinked;
+  LoggedInWithPhoneNumberUserState(
+      {this.justLinked,
+      User<TUserProfile> user,
+      bool justLoggedIn = false,
+      UpdateUserProfileEvent<TUserProfile> updateUserProfileEvent})
+      : super(<dynamic>[],
+            user: user,
+            justLoggedIn: justLoggedIn,
+            updateUserProfileEvent: updateUserProfileEvent);
+}
+
+class VaitingForVerificationState extends GuestUserState {
+  final UserBlocState previousState;
+  final String verificationId;
+  VaitingForVerificationState({this.verificationId, this.previousState});
+}
+
+class LoginConflictState extends LoginErrorState { 
+  LoginConflictState({this.conflicts});
+  final List<String> conflicts;
+}
+
+class VerificationCompletedState extends GuestUserState {
+  final AuthCredential auth;
+  VerificationCompletedState({this.auth});
+}
+
+class PhoneNumberManualVerificationNecessaryState extends GuestUserState {
+  final String verificationId;
+  PhoneNumberManualVerificationNecessaryState({this.verificationId});
+}
+
+
+class LoginWithCredentialState extends GuestUserState {
+  final AuthCredential credential;
+  LoginWithCredentialState({this.credential});
 }
 
 class LoggedInWithFacebookUserState<TUserProfile>

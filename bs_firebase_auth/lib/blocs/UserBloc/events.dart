@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:bs_firebase_auth/blocs/UserBloc/states.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:meta/meta.dart';
 
@@ -29,8 +30,9 @@ class LogoutEvent extends UserBlocEvent {}
 class CreateUserEvent extends UserBlocEvent {
   final String email;
   final String password;
+  final List<String> checkConflictFor;
 
-  CreateUserEvent({this.email, this.password});
+  CreateUserEvent({this.email, this.password, this.checkConflictFor});
 }
 
 class LinkWithEmailCredentialEvent extends UserBlocEvent {
@@ -88,6 +90,47 @@ class LoginWithEmailEvent extends LoginEvent {
       "${super.toString()} { email: $email, password: $password }";
 }
 
+class LoginWithPhoneNumberEvent extends LoginEvent {
+  final AuthCredential credential;
+  final String verificationId;
+  final String smsCode;
+
+  LoginWithPhoneNumberEvent({this.credential, this.verificationId, this.smsCode});
+
+  @override
+  String toString() =>
+      "${super.toString()} { credential: $credential }";
+}
+
+class LinkWithPhoneNumberEvent extends LoginWithPhoneNumberEvent {
+  LinkWithPhoneNumberEvent({AuthCredential credential, String verificationId, String smsCode})
+  :super(credential:credential, verificationId:verificationId, smsCode:smsCode);
+
+  @override
+  String toString() =>
+      "${super.toString()}";
+}
+
+class DelegateStateEvent extends UserBlocEvent {
+  final UserBlocState state;
+  
+  DelegateStateEvent({this.state});
+
+  @override
+  String toString() =>
+      "${super.toString()} { state: $state }";
+}
+
+class VerifyPhoneNumberEvent extends LoginEvent {
+  final String phoneNumber;
+
+  VerifyPhoneNumberEvent({this.phoneNumber});
+
+  @override
+  String toString() =>
+      "${super.toString()} { phoneNumber: $phoneNumber }";
+}
+
 class LoginWithEmailAndLinkAccountEvent extends LoginWithEmailEvent {
   final AccountLinkingData accountLinkingData;
 
@@ -124,4 +167,10 @@ class LoginWithGoogleAndLinkAccountEvent extends LoginWithGoogleEvent {
 class PasswordResetEvent extends UserBlocEvent {
   final String email;
   PasswordResetEvent({this.email});
+}
+
+class ResendVerificationEmailEvent extends UserBlocEvent {
+  final String email;
+  final String password;
+  ResendVerificationEmailEvent({this.email, this.password});
 }

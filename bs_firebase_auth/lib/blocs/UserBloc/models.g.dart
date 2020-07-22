@@ -69,6 +69,7 @@ const _$ProviderEnumMap = {
   Provider.google: 'google',
   Provider.email: 'email',
   Provider.anonymous: 'anonymous',
+  Provider.phone: 'phone',
 };
 
 User<TUserProfile> _$UserFromJson<TUserProfile>(Map<String, dynamic> json) {
@@ -79,6 +80,7 @@ User<TUserProfile> _$UserFromJson<TUserProfile>(Map<String, dynamic> json) {
     ..displayName = json['displayName'] as String
     ..profilePictureUrl = json['profilePictureUrl'] as String
     ..currency = json['currency'] as String
+    ..phoneNumber = json['phoneNumber'] as String
     ..userProfile = _fromJsonProfile(json['userProfile']);
 }
 
@@ -90,5 +92,6 @@ Map<String, dynamic> _$UserToJson<TUserProfile>(User<TUserProfile> instance) =>
       'displayName': instance.displayName,
       'profilePictureUrl': instance.profilePictureUrl,
       'currency': instance.currency,
+      'phoneNumber': instance.phoneNumber,
       'userProfile': _toJsonProfile(instance.userProfile),
     };
