@@ -92,7 +92,6 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
                 orElse: () => null)
             ?.email;
     _blocData.user.displayName = firebaseUser.displayName ??
-        firebaseUser.photoUrl ??
         firebaseUser.providerData
             .firstWhere(
                 (pd) =>
@@ -161,6 +160,7 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
   Stream<UserBlocState> mapEventToState(UserBlocEvent event) async* {
     // Split again after https://github.com/dart-lang/language/issues/121
     UserBlocState previousState = state;
+    previousState.recreated = true;
     try {
       if (event is InitializeEvent) {
         //////////////////////////////////////////  InitializeEvent //////////////////////////////////////////
@@ -330,6 +330,80 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
                             ?.user;
                   }
                 } else {
+                  try {
+                    firebaseUser =
+                        (await firebaseAuth.signInWithCredential(credential))
+                            ?.user;
+                  } catch (e) {
+                    // if user doesn't exist create it
+
+                    if (event.forceCreate && e.code == "ERROR_USER_NOT_FOUND") {
+                      firebaseUser =
+                          (await firebaseAuth.createUserWithEmailAndPassword(
+                                  email: event.email, password: event.password))
+                              ?.user;
+                    } else
+                      throw e;
+                  }
+                }
+
+                // if state was anonymous let's delete previous user as it would be lost
+                /*if (previousState is LoggedInWithAnonymousUserState) {
+                  await _firebaseUser.delete();
+                }*/
+
+                logger.finer("FirebaseUser: { $firebaseUser }");
+                _firebaseUser = firebaseUser;
+                _blocData.user ??= User<TUserProfile>();
+                _copyFirebaseUserProperties(firebaseUser);
+                _blocData.user.userProfile =
+                    await manager?.create(await _authToken, _blocData.user);
+                _blocData
+                  ..password = event.password
+                  ..link = null
+                  ..provider = Provider.email;
+
+                yield LoggedInWithEmailUserState<TUserProfile>(
+                    user: _blocData.user,
+                    password: event.password,
+                    justLoggedIn: true);
+              } on PlatformException catch (e) {
+                yield LoginErrorState(error: e, loginEvent: event);
+                yield previousState;
+              }
+            }
+          }
+        } else if (event is LoginWithEmailLinkEvent) {
+          //////////////////////////////////////////  LoginWithEmailEvent //////////////////////////////////////////
+
+          /* Stream<State> _mapLoginWithEmailToState(LoginWithEmailEvent event) async* */
+          {
+            if (state is GuestUserState ||
+                state is LoggedInWithAnonymousUserState ||
+                state is LoggedInWithPhoneNumberUserState) {
+              try {
+                yield UserLoggingInState(loginEvent: event);
+
+                FirebaseAuth firebaseAuth = FirebaseAuth.instance;
+
+                AuthCredential credential =
+                    EmailAuthProvider.getCredentialWithLink(
+                        email: event.email, link: event.link);
+
+                FirebaseUser firebaseUser;
+                if (event is LoginWithEmailLinkAndLinkAccountEvent) {
+                  firebaseUser = await firebaseAuth.currentUser();
+
+                  if (firebaseUser != null &&
+                      firebaseUser.providerData.firstWhere(
+                              (pd) => pd.providerId == "password",
+                              orElse: () => null) ==
+                          null) {
+                    firebaseUser =
+                        (await firebaseUser.linkWithCredential(credential))
+                            ?.user;
+                  }
+                } else {
                   firebaseUser =
                       (await firebaseAuth.signInWithCredential(credential))
                           ?.user;
@@ -352,13 +426,12 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
                 _blocData.user.userProfile =
                     await manager?.create(await _authToken, _blocData.user);
                 _blocData
-                  ..password = event.password
+                  ..link = event.link
+                  ..password = null
                   ..provider = Provider.email;
 
                 yield LoggedInWithEmailUserState<TUserProfile>(
-                    user: _blocData.user,
-                    password: event.password,
-                    justLoggedIn: true);
+                    user: _blocData.user, link: event.link, justLoggedIn: true);
               } on PlatformException catch (e) {
                 yield LoginErrorState(error: e, loginEvent: event);
                 yield previousState;
@@ -415,12 +488,17 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
                           verificationId: verificationId)));
                 },
                 codeAutoRetrievalTimeout: (verificationId) {
-                  /*add(DelegateStateEvent(state:VaitingForVerificationState(
-                    verificationId: verificationId)));*/
+                  Map error = {"code": "ERROR_PHONE_VERIFICATION_TIMEOUT"};
+                  add(DelegateStateEvent(
+                      state: LoginErrorState(error: error, loginEvent: event)));
+                  //previousState.recreated = false;
+                  add(DelegateStateEvent(state: previousState));
                 },
                 verificationCompleted: (auth) {
                   add(previousState is LoggedInUserState
-                      ? LinkWithPhoneNumberEvent(credential: auth)
+                      ? LinkWithPhoneNumberEvent(
+                          credential: auth,
+                          alreadyRegistered: event.alreadyRegistered)
                       : LoginWithPhoneNumberEvent(credential: auth));
                 });
           } on Exception catch (e) {
@@ -451,54 +529,35 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
 
                 if (event is LinkWithPhoneNumberEvent) {
                   try {
-                    firebaseUser =
-                        (await currentUser.linkWithCredential(credential))
-                            ?.user;
-                    rewriteProvider = savedProvider;
-                  } catch (e) {
-                    print(e.code + "lofasz");
-                    // if the phone number is already associated with somebody else we should log in to that account delete the current one
-                    // link the current again
-                    // we are either facebook or google logged in
-
-                    if (kIsWeb && e.code == "auth/credential-already-in-use" ||
-                        e.code == "ERROR_CREDENTIAL_ALREADY_IN_USE") {
-                      // let's save the auth credential
-
-                      AuthCredential savedCredential;
-
-                      if (_blocData.provider == Provider.google) {
-                        savedCredential = GoogleAuthProvider.getCredential(
-                          idToken: _blocData.googleIdToken,
-                          accessToken: _blocData.googleAccessToken,
-                        );
-                        rewriteProvider = Provider.google;
-                      } else if (_blocData.provider == Provider.facebook) {
-                        savedCredential = FacebookAuthProvider.getCredential(
-                            accessToken: _blocData.facebookAccessToken);
-                        rewriteProvider = Provider.facebook;
-                      }
-
-                      // if recent login is necessary
-                      firebaseUser = (await firebaseAuth
-                              .signInWithCredential(savedCredential))
-                          ?.user;
-
-                      await currentUser.delete();
-
-                      // todo delete the user from our database
-
+                    // first login with phone number
+                    if (event.alreadyRegistered) {
                       firebaseUser =
                           (await firebaseAuth.signInWithCredential(credential))
                               ?.user;
-
-                      firebaseUser = (await firebaseUser
-                              .linkWithCredential(savedCredential))
-                          ?.user;
-                      /*yield LoginErrorState(error: {
+                      yield LoginErrorState(error: {
                         "code": "ERROR_CREDENTIAL_ALREADY_IN_USE",
+                      }, loginEvent: event, obj: "${firebaseUser.email ?? firebaseUser.providerData.firstWhere((pd) =>pd.providerId != 'firebase' || pd.providerId != 'phone', orElse: () => null)?.email} (${firebaseUser.providerData.map((pd) => pd.providerId).toList().firstWhere((pd) => pd != "firebase" && pd != "phone")})");
+                    } else {
+                      firebaseUser =
+                          (await currentUser.linkWithCredential(credential))
+                              ?.user;
+                    }
+
+                    rewriteProvider = savedProvider;
+                  } catch (e) {
+                    if (e.code == "ERROR_INVALID_VERIFICATION_CODE") {
+                      // TODO: handle invalid verification codeú
+                      firebaseUser = (await firebaseUser.linkWithCredential(
+                              EmailAuthProvider.getCredential(
+                                  email: _blocData.user.email,
+                                  password: _blocData.password)))
+                          ?.user;
+
+                      yield LoginErrorState(error: {
+                        "code": "ERROR_INVALID_VERIFICATION_CODE",
                         "providerData": firebaseUser.providerData
-                      }, loginEvent: event);*/
+                      }, loginEvent: event);
+                      return;
                     }
                   }
                 } else
@@ -658,8 +717,8 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
               }
 
               await _firebaseUser.updateProfile(fbUpdate);
+              _firebaseUser = await FirebaseAuth.instance.currentUser();
               _copyFirebaseUserProperties(_firebaseUser);
-              _blocData.user.displayName = event.displayName;
 
               _blocData.user.userProfile = await manager?.merge(
                   event.input, _blocData.user.userProfile, _blocData.user);
@@ -787,6 +846,7 @@ class UserBloc<TUserProfile> extends Bloc<UserBlocEvent, UserBlocState> {
         return LoggedInWithEmailUserState(
             user: _blocData.user,
             password: _blocData.password,
+            link: _blocData.link,
             justLoggedIn: justLoggedIn,
             updateUserProfileEvent: event);
       case Provider.anonymous:

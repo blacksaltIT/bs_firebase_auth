@@ -7,7 +7,11 @@ import 'package:meta/meta.dart';
 @immutable
 abstract class UserBlocState extends Equatable {
   final List<Object> _props;
-  UserBlocState([this._props = const <dynamic>[]]) : super();
+  bool recreated;
+  UserBlocState([this._props = const <dynamic>[]]) : super() {
+    recreated = false;
+  }
+
 
   @override
   List<Object> get props => _props;
@@ -31,8 +35,9 @@ class ErrorState extends UserBlocState {
 
 class LoginErrorState extends ErrorState {
   final UserBlocEvent loginEvent;
+  dynamic obj;
 
-  LoginErrorState({@required dynamic error, @required this.loginEvent})
+  LoginErrorState({@required dynamic error, @required this.loginEvent, dynamic this.obj})
       : super(error: error);
 }
 
@@ -225,10 +230,12 @@ class LoggedInWithGoogleUserState<TUserProfile>
 class LoggedInWithEmailUserState<TUserProfile>
     extends LoggedInUserState<TUserProfile> {
   final String password;
+  final String link;
 
   LoggedInWithEmailUserState(
       {User<TUserProfile> user,
       this.password,
+      this.link,
       bool justLoggedIn = false,
       UpdateUserProfileEvent<TUserProfile> updateUserProfileEvent})
       : super(<dynamic>[password],

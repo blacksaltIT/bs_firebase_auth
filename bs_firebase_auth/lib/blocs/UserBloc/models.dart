@@ -39,6 +39,7 @@ class BlocData<TUserProfile> with EquatableMixin {
   String googleIdToken;
   String googleAccessToken;
   String password;
+  String link;
 
   BlocData() {
     user = User();
@@ -54,6 +55,7 @@ class BlocData<TUserProfile> with EquatableMixin {
       googleIdToken,
       googleAccessToken,
       password,
+      link
     ];
   }
 

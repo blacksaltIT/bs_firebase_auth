@@ -19,10 +19,7 @@ dependencies:
   bloc: ^3.0.0
   flutter_bloc: ^3.2.0
   equatable: ^1.0.1
-  flutter_facebook_login:
-    #git:
-    path: ../../flutter_facebook_login
-    #  ref: v1.3.0-web
+  flutter_facebook_login: ^3.0.0
   google_sign_in: ^4.0.0
 
 dev_dependencies:

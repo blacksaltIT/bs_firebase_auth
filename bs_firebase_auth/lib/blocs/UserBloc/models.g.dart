@@ -17,7 +17,8 @@ BlocData<TUserProfile> _$BlocDataFromJson<TUserProfile>(
     ..facebookAccessToken = json['facebookAccessToken'] as String
     ..googleIdToken = json['googleIdToken'] as String
     ..googleAccessToken = json['googleAccessToken'] as String
-    ..password = json['password'] as String;
+    ..password = json['password'] as String
+    ..link = json['link'] as String;
 }
 
 Map<String, dynamic> _$BlocDataToJson<TUserProfile>(
@@ -30,6 +31,7 @@ Map<String, dynamic> _$BlocDataToJson<TUserProfile>(
       'googleIdToken': instance.googleIdToken,
       'googleAccessToken': instance.googleAccessToken,
       'password': instance.password,
+      'link': instance.link
     };
 
 T _$enumDecode<T>(

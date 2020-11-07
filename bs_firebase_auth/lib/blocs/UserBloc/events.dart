@@ -82,20 +82,33 @@ class LoginWithFacebookAndLinkAccountEvent extends LoginWithFacebookEvent {
 class LoginWithEmailEvent extends LoginEvent {
   final String email;
   final String password;
+  final bool forceCreate;
 
-  LoginWithEmailEvent({this.email, this.password});
+  LoginWithEmailEvent({this.email, this.password, this.forceCreate = false});
 
   @override
   String toString() =>
-      "${super.toString()} { email: $email, password: $password }";
+      "${super.toString()} { email: $email, password: $password, forceCreate: $forceCreate}";
+}
+
+class LoginWithEmailLinkEvent extends LoginEvent {
+  final String email;
+  final String link;
+
+  LoginWithEmailLinkEvent({this.link, this.email});
+
+  @override
+  String toString() =>
+      "${super.toString()} { link: $link , email: $email }";
 }
 
 class LoginWithPhoneNumberEvent extends LoginEvent {
   final AuthCredential credential;
   final String verificationId;
   final String smsCode;
+  final bool alreadyRegistered;
 
-  LoginWithPhoneNumberEvent({this.credential, this.verificationId, this.smsCode});
+  LoginWithPhoneNumberEvent({this.credential, this.verificationId, this.smsCode, this.alreadyRegistered = false});
 
   @override
   String toString() =>
@@ -103,8 +116,8 @@ class LoginWithPhoneNumberEvent extends LoginEvent {
 }
 
 class LinkWithPhoneNumberEvent extends LoginWithPhoneNumberEvent {
-  LinkWithPhoneNumberEvent({AuthCredential credential, String verificationId, String smsCode})
-  :super(credential:credential, verificationId:verificationId, smsCode:smsCode);
+  LinkWithPhoneNumberEvent({AuthCredential credential, String verificationId, String smsCode, bool alreadyRegistered})
+  :super(credential:credential, verificationId:verificationId, smsCode:smsCode, alreadyRegistered:alreadyRegistered);
 
   @override
   String toString() =>
@@ -123,8 +136,9 @@ class DelegateStateEvent extends UserBlocEvent {
 
 class VerifyPhoneNumberEvent extends LoginEvent {
   final String phoneNumber;
+  final bool alreadyRegistered;
 
-  VerifyPhoneNumberEvent({this.phoneNumber});
+  VerifyPhoneNumberEvent({this.phoneNumber, this.alreadyRegistered = false});
 
   @override
   String toString() =>
@@ -135,8 +149,20 @@ class LoginWithEmailAndLinkAccountEvent extends LoginWithEmailEvent {
   final AccountLinkingData accountLinkingData;
 
   LoginWithEmailAndLinkAccountEvent(
-      {String email, String password, this.accountLinkingData})
-      : super(email: email, password: password);
+      {String email, String password, bool forceCreate, this.accountLinkingData})
+      : super(email: email, password: password, forceCreate:forceCreate);
+
+  @override
+  String toString() =>
+      "${super.toString()} { accountLinkingData: $accountLinkingData}";
+}
+
+class LoginWithEmailLinkAndLinkAccountEvent extends LoginWithEmailLinkEvent {
+  final AccountLinkingData accountLinkingData;
+
+  LoginWithEmailLinkAndLinkAccountEvent(
+      {String link, this.accountLinkingData})
+      : super(link: link);
 
   @override
   String toString() =>
